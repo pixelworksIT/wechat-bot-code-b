@@ -27,6 +27,35 @@ from threading import Thread
 
 from itchat.content import *
 
+class RunModuleError(Exception):
+    """Base class for exceptions when loading and running module."""
+    pass
+
+def _run_module(module_path, from_path, msg = None, args = []):
+    """Dynamic load module and run module.run()"""
+
+    msg_result = u''
+    target_module = None
+
+    # Do import
+    try:
+        target_module = __import__(module_path, fromlist = [from_path])
+    except:
+        print(u"Cannot import %s." % (module_path), file = sys.stderr)
+        raise RunModuleError(u"Job failed (import error).", 1)
+
+    # Run job
+    try:
+        if args:
+            msg_result = target_module.run(msg, *args)
+        else:
+            msg_result = target_module.run(msg)
+    except:
+        print(u"Cannot run job %s.run()" % (module_path), file = sys.stderr)
+        raise RunModuleError(u"Job failed (run error).", 2)
+
+    return msg_result
+
 def run_job_action(msg, is_group_chat = False):
     """Do requested job action"""
 
@@ -94,30 +123,30 @@ def run_job_action(msg, is_group_chat = False):
         if len(msg_texts) > n_action_msg:
             action_args = msg_texts[n_action_msg:]
 
-    # Do import
     try:
-        job_module = __import__(module_path, fromlist = [from_path])
+        msg_job = _run_module(module_path, from_path, msg, action_args)
+    except RunModuleError as err:
+        msg_job = err.args[0]
+        msg_job += u'\nTo get more help, try:\n'
+        if len(msg_texts) < n_action_msg:
+            if err.args[1] == 2:
+                """If run error"""
+                if is_group_chat:
+                    msg_job += u'@%s\u2005%s help' % (msg[u'User'].Self.DisplayName, module_path.rsplit(u'.')[-1])
+                else:
+                    msg_job += u'%s help' % (module_path.rsplit(u'.')[-1])
+            else:
+                if is_group_chat:
+                    msg_job += u'@%s\u2005help' % (msg[u'User'].Self.DisplayName)
+                else:
+                    msg_job += u'help'
+        else:
+            if is_group_chat:
+                msg_job += u'@%s\u2005%s help' % (msg[u'User'].Self.DisplayName, from_path.rsplit(u'.')[-1])
+            else:
+                msg_job += u'%s help' % (from_path.rsplit(u'.')[-1])
     except:
-        if is_group_chat:
-            msg.user.send(u'@%s\u2005Job failed (import error).' % (reply_to))
-        else:
-            msg.user.send(u"Job failed (import error).")
-        print(u"Cannot import %s." % (module_path), file = sys.stderr)
-        return
-
-    # Run job
-    try:
-        if action_args:
-            msg_job = job_module.run(msg, *action_args)
-        else:
-            msg_job = job_module.run(msg)
-    except:
-        if is_group_chat:
-            msg.user.send(u'@%s\u2005Job failed (run error).' % (reply_to))
-        else:
-            msg.user.send(u"Job failed (run error).")
-        print(u"Cannot run job %s.run()" % (module_path), file = sys.stderr)
-        return
+        msg_job = u"Unknown error."
 
     # Reply
     if is_group_chat:

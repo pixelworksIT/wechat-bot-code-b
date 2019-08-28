@@ -76,8 +76,8 @@ def help(user_display_name, module_file_fullpath, module_name):
     # Tail messages
     help_msg += u'========\nTo get detailed usage for\neach action, try:\n'
     if user_display_name:
-        help_msg += u'@%s\u2005%s <action> help' % (user_display_name, my_package)
+        help_msg += u'@%s\u2005%s <action> -h' % (user_display_name, my_package)
     else:
-        help_msg += u'%s <action> help' % (my_package)
+        help_msg += u'%s <action> -h' % (my_package)
 
     return help_msg

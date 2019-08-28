@@ -20,13 +20,31 @@
 #
 ## // ##
 
+import argparse
+
 def run(msg, *args):
     """Just print out hello message and recieved arguments"""
 
-    all_args_string = u''
-    for arg in args:
-        all_args_string += arg + u' '
-    return u'Hello %s, I got %d args, they are %s' % (msg[u'User'].NickName, len(args), all_args_string)
+    action_msg = None
+
+    module_name_parts = __name__.split(u'.')
+
+    arg_parser = argparse.ArgumentParser(
+        prog = u'%s %s' % (module_name_parts[-2], module_name_parts[-1])
+    )
+    arg_parser.add_argument(u'name', metavar = u'YourName',
+        help = u'Please give your name, then I can say hello to you.'
+    )
+
+    try:
+        my_args = arg_parser.parse_args(args)
+    except:
+        action_msg = arg_parser.format_help()
+        return action_msg
+
+    action_msg = u'Hello %s! %d args' % (my_args.name, len(args))
+
+    return action_msg
 
 def help_desc():
     """Description for current module (Action)"""
