@@ -35,6 +35,10 @@ def run(msg, *args):
     arg_parser.add_argument(u'name', metavar = u'YourName',
         help = u'Please give your name, then I can say hello to you.'
     )
+    arg_parser.add_argument(u'-n', metavar = u'NickName', nargs = u'?',
+        const = u'unknown', default = u'unknown',
+        help = u'May I know your nick name?'
+    )
 
     try:
         my_args = arg_parser.parse_args(args)
@@ -43,6 +47,8 @@ def run(msg, *args):
         return action_msg
 
     action_msg = u'Hello %s! %d args' % (my_args.name, len(args))
+    if my_args.n != u'unknown':
+        action_msg += u'\nGlad to know your nickname %s.' % (my_args.n)
 
     return action_msg
 
