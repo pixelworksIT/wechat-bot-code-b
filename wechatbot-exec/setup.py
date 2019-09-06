@@ -11,7 +11,7 @@ setuptools.setup(
     description = "Python WeChat bot main process, based on itchat.",
     long_description = long_description,
     long_description_content_type = "text/markdown",
-    url = "https://github.com/pixelworksIT/wechatbot-exec",
+    url = "https://github.com/pixelworksIT/wechat-bot-code-b",
     license = "Apache Software License",
     packages=setuptools.find_packages(),
     #install_requires = ["itchat", "wechatbot", "wechatbothelper"],

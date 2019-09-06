@@ -11,7 +11,7 @@ setuptools.setup(
     description = "WeChat bot job modules and actions.",
     long_description = long_description,
     long_description_content_type = "text/markdown",
-    url = "https://github.com/pixelworksIT/wechatbot",
+    url = "https://github.com/pixelworksIT/wechat-bot-code-b",
     license = "Apache Software License",
     packages=setuptools.find_packages(),
     #install_requires = ["wechatbothelper"],
