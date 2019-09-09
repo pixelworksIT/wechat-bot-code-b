@@ -26,14 +26,17 @@ wechatbot /
     |- __init__.py
     |- help.py
         |- def run(msg, *args): ...
+        |- _config_opts = [...]
     |- job (1st word) /
         |- __init__.py
         |- action.py (2nd word)
             |- def run(msg, *args): ...
             |- _help_desc = u'...'
+            |- _config_opts = [...]
         |- help.py
             |- def run(msg, *args): ...
             |- _help_desc = u'...'
+            |- _config_opts = [...]
 ```
 
 You can use the default `sayhello` and `sayhello.greet` as an example to start your own jobs and actions.
