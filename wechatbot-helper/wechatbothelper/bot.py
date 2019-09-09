@@ -60,10 +60,10 @@ def help(user_display_name, module_file_fullpath, module_name):
             continue
         # Get Job description
         try:
-            job_desc = job_help_module.help_desc()
+            job_desc = job_help_module._help_desc
         except:
             job_desc = u'[no description]'
-            print(u"No help_desc() for %s." % (job_name), file = sys.stderr)
+            print(u"No _help_desc for %s." % (job_name), file = sys.stderr)
 
         # Arrange job_name and job_desc in help_msg
         help_msg += u'> %s\n\t%s\n' % (job_name, job_desc)

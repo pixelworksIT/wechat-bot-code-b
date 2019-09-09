@@ -22,6 +22,19 @@
 
 import argparse
 
+# Description for current module (Action)
+_help_desc = u'Just say hello\n\tand echo input'
+
+# Definition of options needed in config file, with default value, and/or comment,
+# Options in this module should be in [sayhello.greet] section. Can be empty.
+_config_opts = [
+    {
+        u'name': u'count_args',
+        u'default': u'1',
+        u'description': u'Count number of args and tell user.'
+    }
+]
+
 def run(msg, *args):
     """Just print out hello message and recieved arguments"""
 
@@ -51,7 +64,3 @@ def run(msg, *args):
         action_msg += u'\nGlad to know your nickname %s.' % (my_args.n)
 
     return action_msg
-
-def help_desc():
-    """Description for current module (Action)"""
-    return u'Just say hello\n\tand echo input'

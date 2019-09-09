@@ -24,6 +24,16 @@ import os
 
 from wechatbothelper.bot import help as bot_help
 
+# Definition of options needed in config file, with default value, and/or comment,
+# Options in this module should be in [DEFAULT.help] section
+_config_opts = [
+    {
+        u'name': u'help_language',
+        u'default': u'en',
+        u'description': u'Help in different languages'
+    }
+]
+
 def run(msg, *args):
     """Return available Job module names with description"""
 

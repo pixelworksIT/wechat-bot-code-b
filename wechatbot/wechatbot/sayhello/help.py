@@ -24,6 +24,13 @@ import os
 
 from wechatbothelper.job import help as job_help
 
+# Description message for job 'sayhello'
+_help_desc = u'A sample job'
+
+# Definition of options needed in config file, with default value, and/or comment,
+# Options in this module should be in [sayhello.help] section. Can be empty.
+_config_opts = []
+
 def run(msg, *args):
     """Return available Action names with description"""
 
@@ -34,7 +41,3 @@ def run(msg, *args):
         pass
 
     return job_help(my_display_name, __file__, __name__)
-
-def help_desc():
-    """Return description message for job 'sayhello'"""
-    return u'A sample job'

@@ -21,11 +21,92 @@
 ## // ##
 
 import os, sys, re, shlex
+import configparser
 import itchat
 
 from threading import Thread
 
 from itchat.content import *
+
+# Config options resides in [DEFAULT] section
+_config_opts = [
+    {
+        u'name': u'job_package',
+        u'default': u'wechatbot',
+        u'description': u'The package that contains all job sub-package and action modules.'
+    }
+]
+
+# The config values for all jobs and actions
+# Should be loaded in run()
+_config = None
+
+def _build_config(config_obj, pkg_name):
+    """Build package config options"""
+
+    # Get top-most package name
+    pkg_name_parts = pkg_name.split(u'.')
+    top_pkg_name = pkg_name_parts[0]
+    # Import the top-most package first
+    top_pkg = __import__(top_pkg_name)
+    # Get the top-most package path
+    this_pkg_fullpath = os.path.dirname(top_pkg.__file__)
+    #If we have more sub package names
+    if len(pkg_name_parts) > 1:
+        this_pkg_fullpath += os.path.sep + os.path.sep.join(pkg_name_parts[1:])
+
+    # Going through the package path
+    for anything in os.listdir(this_pkg_fullpath):
+        # Ignore anything start with "__"
+        if re.findall(u'^__.+', anything):
+            continue
+        # Ignore anything start with "."
+        if re.findall(u'^\..*', anything):
+            continue
+
+        if os.path.isdir(os.path.join(this_pkg_fullpath, anything)):
+            # If anything is dir, dive in.
+            _build_config(config_obj, u'.'.join([pkg_name, anything]))
+        else:
+            # If anything is file, then import as module and deal with config opts
+            ## Get the module name
+            module_name = re.sub(u'\.py$', u'', anything)
+            ## Import the module
+            this_module = __import__(
+                u'.'.join([pkg_name, module_name]),
+                fromlist = [pkg_name]
+            )
+            ## Check if _config_opts is defined in module
+            if u'_config_opts' in dir(this_module):
+                ## Go on deal with config opts
+                ### Section name first
+                this_section_name = u'%s.%s' % (
+                    pkg_name.replace(
+                        config_obj[u'DEFAULT'][u'job_package'],
+                        u'DEFAULT'
+                    ),
+                    module_name
+                )
+                if len(pkg_name_parts) > 1:
+                    this_section_name = this_section_name.replace(
+                        u'DEFAULT.', u''
+                    )
+                ### Add the section if not exist
+                if not config_obj.has_section(this_section_name):
+                    config_obj.add_section(this_section_name)
+                ### Loop through all config opts, set if not exits
+                for conf_opt in this_module._config_opts:
+                    if (u'name' not in conf_opt.keys()) or (u'default' not in conf_opt.keys()):
+                        ### If name or default not defined, skip
+                        continue
+                    if not config_obj.has_option(this_section_name, conf_opt[u'name']):
+                        ### A specific option not exist, we add it
+                        if u'description' in conf_opt.keys():
+                            ### First add comment (description) if defined
+                            config_obj.set(this_section_name, u'; %s' % (conf_opt[u'description']), u'')
+                        ### Then add the option with default value
+                        config_obj.set(this_section_name, conf_opt[u'name'], conf_opt[u'default'])
+
 
 class RunModuleError(Exception):
     """Base class for exceptions when loading and running module."""
@@ -64,13 +145,16 @@ def run_job_action(msg, is_group_chat = False):
         print(u"Ignore not At(@) messasges in group chat", file = sys.stderr)
         return
 
+    # Make _config is referenced as a global var
+    global _config
+
     # Reply to
     reply_to = msg[u'User'].NickName
     if is_group_chat:
         reply_to = msg[u'ActualNickName']
 
     # Some default vars
-    job_module = u'wechatbot'
+    job_pkg = _config[u'DEFAULT'][u'job_package']
     module_path = u''
     from_path = u''
     action_args = []
@@ -113,12 +197,12 @@ def run_job_action(msg, is_group_chat = False):
     # [3:] : all as arguments
     if len(msg_texts) < n_action_msg:
         # Only job word specified
-        module_path = u'%s.%s' % (job_module, msg_texts[n_action_msg - 2].lower())
-        from_path = job_module
+        module_path = u'%s.%s' % (job_pkg, msg_texts[n_action_msg - 2].lower())
+        from_path = job_pkg
     else:
         # Job and Action and maybe arguments specified
-        module_path = u'%s.%s.%s' % (job_module, msg_texts[n_action_msg - 2].lower(), msg_texts[n_action_msg - 1].lower())
-        from_path = u'%s.%s' % (job_module, msg_texts[n_action_msg - 2].lower())
+        module_path = u'%s.%s.%s' % (job_pkg, msg_texts[n_action_msg - 2].lower(), msg_texts[n_action_msg - 1].lower())
+        from_path = u'%s.%s' % (job_pkg, msg_texts[n_action_msg - 2].lower())
         # If we have more than 3 items, then we have arguments
         if len(msg_texts) > n_action_msg:
             action_args = msg_texts[n_action_msg:]
@@ -189,14 +273,48 @@ def not_supported(msg):
 
 def run():
     file_login_status = u'%s/.wechatbot_login_status' % (os.path.expanduser(u'~'))
+    file_config = u'%s/.wechatbotrc' % (os.path.expanduser(u'~'))
 
-    try:
-        itchat.auto_login(
-            enableCmdQR = 2,
-            hotReload = True,
-            statusStorageDir = file_login_status
-        )
+    # try:
+    print(u"Rebuilding config file ...")
 
-        itchat.run()
-    except:
-        print(u"Some error. Debug code.", file = sys.stderr)
+    # Make sure these config vars are referenced as global var
+    global _config
+    global _config_opts
+
+    # Re-build config file
+    _config = configparser.ConfigParser()
+    # If config file exists, read in first
+    if os.path.isfile(file_config):
+        _config.read(file_config)
+    ## [DEFAULT] section
+    for conf_opt in _config_opts:
+        ## Loop through all config options to rebuild the config file
+        if (u'name' not in conf_opt.keys()) or (u'default' not in conf_opt.keys()):
+            ## If name or default not defined, skip
+            continue
+        if not _config.has_option(None, conf_opt[u'name']):
+            ## A specific option not exist, we add it
+            if u'description' in conf_opt.keys():
+                ## First add comment (description) if defined
+                _config.set(u'DEFAULT', u'; %s' % (conf_opt[u'description']), u'')
+            ## Then add the option with default value
+            _config.set(u'DEFAULT', conf_opt[u'name'], conf_opt[u'default'])
+
+    # Go through all modules and packages and build the config structure
+    _build_config(_config, _config[u'DEFAULT'][u'job_package'])
+
+    # Save config file
+    with open(file_config, 'w') as configfile:
+        _config.write(configfile)
+
+    # Login WeChat and run
+    itchat.auto_login(
+        enableCmdQR = 2,
+        hotReload = True,
+        statusStorageDir = file_login_status
+    )
+
+    itchat.run()
+    # except:
+    #     print(u"Some error. Debug code.", file = sys.stderr)
