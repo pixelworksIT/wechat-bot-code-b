@@ -35,8 +35,11 @@ _config_opts = [
     }
 ]
 
-def run(msg, *args):
+def run(context, *args):
     """Just print out hello message and recieved arguments"""
+
+    msg = context[u'msg']
+    config = context[u'config']
 
     action_msg = None
 
@@ -59,7 +62,11 @@ def run(msg, *args):
         action_msg = arg_parser.format_help()
         return action_msg
 
-    action_msg = u'Hello %s! %d args' % (my_args.name, len(args))
+    if config[u'count_args'] == u'1':
+        action_msg = u'Hello %s! %d args\nConfigured to count args,' % (my_args.name, len(args))
+    else:
+        action_msg = u'Hello %s!' % (my_args.name)
+
     if my_args.n != u'unknown':
         action_msg += u'\nGlad to know your nickname %s.' % (my_args.n)
 

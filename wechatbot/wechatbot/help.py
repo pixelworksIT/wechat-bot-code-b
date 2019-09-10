@@ -34,8 +34,10 @@ _config_opts = [
     }
 ]
 
-def run(msg, *args):
+def run(context, *args):
     """Return available Job module names with description"""
+
+    msg = context[u'msg']
 
     my_display_name = None
     try:

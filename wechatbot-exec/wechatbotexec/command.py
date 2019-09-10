@@ -41,8 +41,10 @@ _config_opts = [
 # Should be loaded in run()
 _config = None
 
-def _build_config(config_obj, pkg_name):
+def _build_config(pkg_name):
     """Build package config options"""
+
+    global _config
 
     # Get top-most package name
     pkg_name_parts = pkg_name.split(u'.')
@@ -66,7 +68,7 @@ def _build_config(config_obj, pkg_name):
 
         if os.path.isdir(os.path.join(this_pkg_fullpath, anything)):
             # If anything is dir, dive in.
-            _build_config(config_obj, u'.'.join([pkg_name, anything]))
+            _build_config(u'.'.join([pkg_name, anything]))
         else:
             # If anything is file, then import as module and deal with config opts
             ## Get the module name
@@ -77,12 +79,12 @@ def _build_config(config_obj, pkg_name):
                 fromlist = [pkg_name]
             )
             ## Check if _config_opts is defined in module
-            if u'_config_opts' in dir(this_module):
+            if (u'_config_opts' in dir(this_module)) and this_module._config_opts:
                 ## Go on deal with config opts
                 ### Section name first
                 this_section_name = u'%s.%s' % (
                     pkg_name.replace(
-                        config_obj[u'DEFAULT'][u'job_package'],
+                        _config[u'DEFAULT'][u'job_package'],
                         u'DEFAULT'
                     ),
                     module_name
@@ -92,20 +94,20 @@ def _build_config(config_obj, pkg_name):
                         u'DEFAULT.', u''
                     )
                 ### Add the section if not exist
-                if not config_obj.has_section(this_section_name):
-                    config_obj.add_section(this_section_name)
+                if not _config.has_section(this_section_name):
+                    _config.add_section(this_section_name)
                 ### Loop through all config opts, set if not exits
                 for conf_opt in this_module._config_opts:
                     if (u'name' not in conf_opt.keys()) or (u'default' not in conf_opt.keys()):
                         ### If name or default not defined, skip
                         continue
-                    if not config_obj.has_option(this_section_name, conf_opt[u'name']):
+                    if not _config.has_option(this_section_name, conf_opt[u'name']):
                         ### A specific option not exist, we add it
                         if u'description' in conf_opt.keys():
                             ### First add comment (description) if defined
-                            config_obj.set(this_section_name, u'; %s' % (conf_opt[u'description']), u'')
+                            _config.set(this_section_name, u'; %s' % (conf_opt[u'description']), u'')
                         ### Then add the option with default value
-                        config_obj.set(this_section_name, conf_opt[u'name'], conf_opt[u'default'])
+                        _config.set(this_section_name, conf_opt[u'name'], conf_opt[u'default'])
 
 
 class RunModuleError(Exception):
@@ -114,9 +116,18 @@ class RunModuleError(Exception):
 
 def _run_module(module_path, from_path, msg = None, args = []):
     """Dynamic load module and run module.run()"""
+    global _config
 
     msg_result = u''
     target_module = None
+
+    # Generate config section name for target_module
+    target_section = module_path.replace(
+        u'%s.' % (_config[u'DEFAULT'][u'job_package']),
+        u''
+    )
+    if len(target_section.split(u'.')) == 1:
+        target_section = u'DEFAULT.%s' % (target_section)
 
     # Do import
     try:
@@ -125,12 +136,17 @@ def _run_module(module_path, from_path, msg = None, args = []):
         print(u"Cannot import %s." % (module_path), file = sys.stderr)
         raise RunModuleError(u"Job failed (import error).", 1)
 
+    # Use a context dict to include msg object and config dict
+    context = {}
+    context[u'msg'] = msg
+    context[u'config'] = _config[target_section]
+
     # Run job
     try:
         if args:
-            msg_result = target_module.run(msg, *args)
+            msg_result = target_module.run(context, *args)
         else:
-            msg_result = target_module.run(msg)
+            msg_result = target_module.run(context)
     except:
         print(u"Cannot run job %s.run()" % (module_path), file = sys.stderr)
         raise RunModuleError(u"Job failed (run error).", 2)
@@ -302,7 +318,7 @@ def run():
             _config.set(u'DEFAULT', conf_opt[u'name'], conf_opt[u'default'])
 
     # Go through all modules and packages and build the config structure
-    _build_config(_config, _config[u'DEFAULT'][u'job_package'])
+    _build_config(_config[u'DEFAULT'][u'job_package'])
 
     # Save config file
     with open(file_config, 'w') as configfile:

@@ -6,13 +6,13 @@ This is a framework of WeChat bot, based on [ItChat](https://github.com/littleco
 
 The execute file `wechatbotexec` in package `wechatbot-exec` start the main process based on `ItChat`.
 
-When recieving message from friend or being @ in group chat, it will take the first word as a module name or a sub-package name in package `wechatbot`, and the second word, if exists, as a module name in the package named by first word. Then it will dynamically load module and try to run `run(msg, *args)` function in that module.
+When recieving message from friend or being @ in group chat, it will take the first word as a module name or a sub-package name in package `wechatbot`, and the second word, if exists, as a module name in the package named by first word. Then it will dynamically load module and try to run `run(context, *args)` function in that module.
 
 The sub-package named by first word is called `Job`, while a module is called `Action`.
 
 ## The run logic
 
-If only first word and no second word, run `wechatbot.1stword.run(msg, *args)`, otherwise run `wechatbot.1stword.2ndword.run(msg, *args)`. Any words after second word will be passed to `run(msg, *args)` as `*args`.
+If only first word and no second word, run `wechatbot.1stword.run(context, *args)`, otherwise run `wechatbot.1stword.2ndword.run(context, *args)`. Any words after second word will be passed to `run(context, *args)` as `*args`.
 
 ## Package explained
 
@@ -25,16 +25,16 @@ The suggested package structure is:
 wechatbot /
     |- __init__.py
     |- help.py
-        |- def run(msg, *args): ...
+        |- def run(context, *args): ...
         |- _config_opts = [...]
     |- job (1st word) /
         |- __init__.py
         |- action.py (2nd word)
-            |- def run(msg, *args): ...
+            |- def run(context, *args): ...
             |- _help_desc = u'...'
             |- _config_opts = [...]
         |- help.py
-            |- def run(msg, *args): ...
+            |- def run(context, *args): ...
             |- _help_desc = u'...'
             |- _config_opts = [...]
 ```

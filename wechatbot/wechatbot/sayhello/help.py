@@ -31,8 +31,10 @@ _help_desc = u'A sample job'
 # Options in this module should be in [sayhello.help] section. Can be empty.
 _config_opts = []
 
-def run(msg, *args):
+def run(context, *args):
     """Return available Action names with description"""
+
+    msg = context[u'msg']
 
     my_display_name = None
     try:
